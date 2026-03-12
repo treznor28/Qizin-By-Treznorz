@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Portfolio | Three.js Developer</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --aqua: #00f2ff;
+            --cyan: #7df9ff;
+            --lavender: #b19cd9;
+            --deep-violet: #0a0514;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glow: 0 0 20px rgba(125, 249, 255, 0.5);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: var(--deep-violet);
+            color: white;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Custom Cursor */
+        #cursor {
+            width: 20px; height: 20px;
+            border: 2px solid var(--aqua);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            box-shadow: var(--glow);
+            transition: transform 0.1s ease-out;
+        }
+
+        /* Background Canvas */
+        #bg-canvas { position: fixed; top: 0; left: 0; z-index: -1; }
+
+        /* Loader */
+        #loader {
+            position: fixed; inset: 0;
+            background: var(--deep-violet);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 10000; transition: opacity 1s ease;
+        }
+        .loader-ring {
+            width: 60px; height: 60px;
+            border: 3px solid transparent;
+            border-top: 3px solid var(--aqua);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed; top: 0; width: 100%;
+            padding: 1.5rem 5%;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(10, 5, 20, 0.4);
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .logo { font-family: 'Orbitron'; font-weight: 700; color: var(--aqua); text-shadow: var(--glow); font-size: 1.4rem; }
+        .nav-links a { color: white; text-decoration: none; margin-left: 2rem; font-size: 0.9rem; letter-spacing: 2px; transition: 0.3s; }
+        .nav-links a:hover { color: var(--aqua); }
+
+        /* Sections */
+        section { min-height: 100vh; width: 100%; display: flex; align-items: center; padding: 0 10%; position: relative; }
+        .glass-card {
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3rem; border-radius: 20px;
+            backdrop-filter: blur(10px);
+            max-width: 700px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        h1, h2 { font-family: 'Orbitron'; text-transform: uppercase; margin-bottom: 1.5rem; }
+        .hero-title { font-size: clamp(2.5rem, 5vw, 4.5rem); background: linear-gradient(45deg, var(--aqua), var(--lavender)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* Buttons */
+        .btn {
+            padding: 1rem 2rem;
+            border: 1px solid var(--aqua);
+            background: transparent;
+            color: white;
+            text-decoration: none;
+            font-family: 'Orbitron';
+            font-size: 0.8rem;
+            margin-right: 1rem;
+            display: inline-block;
+            transition: 0.4s;
+            cursor: pointer;
+        }
+        .btn:hover { background: var(--aqua); color: var(--deep-violet); box-shadow: var(--glow); }
+
+        /* WhatsApp Button Pulse */
+        .hire-btn {
+            border-color: var(--lavender);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(177, 156, 217, 0.6); }
+            70% { box-shadow: 0 0 0 15px rgba(177, 156, 217, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(177, 156, 217, 0); }
+        }
+
+        /* Skills Grid */
+        .skills-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 2rem; }
+        .skill-item { background: rgba(255,255,255,0.05); padding: 1rem; text-align: center; border: 1px solid rgba(0,242,255,0.2); }
+
+        /* Forms */
+        input, textarea {
+            width: 100%; padding: 1rem; margin-bottom: 1rem;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
+            color: white; border-radius: 5px; outline: none;
+        }
+        input:focus { border-color: var(--aqua); }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        @media (max-width: 768px) {
+            nav { padding: 1rem; }
+            .nav-links { display: none; }
+            section { padding: 0 5%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader"><div class="loader-ring"></div></div>
+    <div id="cursor"></div>
+    <canvas id="bg-canvas"></canvas>
+
+    <nav>
+        <div class="logo">TREZNOR</div>
+        <div class="nav-links">
+            <a href="#home">Home</a>
+            <a href="#about">About</a>
+            <a href="#skills">Skills</a>
+            <a href="#projects">Projects</a>
+            <a href="#contact">Contact</a>
+        </div>
+    </nav>
+
+    <section id="home">
+        <div style="text-align: left; max-width: 900px;">
+            <h1 class="hero-title">Creative 3D <br>Web Developer</h1>
+            <p style="font-size: 1.4rem; margin-bottom: 2.5rem; color: #ccc;">I build immersive web experiences using Three.js and modern web technologies.</p>
+            <div class="cta-area">
+                <a href="#projects" class="btn">View Projects</a>
+                <a href="https://wa.me/916397093083?text=Hi!%20I%20saw%20your%20portfolio%20and%20want%20to%20hire%20you." target="_blank" class="btn hire-btn">Hire Me (WhatsApp)</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="about">
+        <div class="glass-card">
+            <h2>The Architect</h2>
+            <p>Passionate about crafting digital universes. I specialize in Three.js, WebGL, and GSAP to bring flat websites to life. Based in the cosmic digital frontier, I turn complex ideas into interactive 3D realities.</p>
+        </div>
+    </section>
+
+    <section id="skills">
+        <div class="glass-card" style="width: 100%;">
+            <h2>Technical Arsenal</h2>
+            <div class="skills-grid">
+                <div class="skill-item">Three.js</div>
+                <div class="skill-item">WebGL</div>
+                <div class="skill-item">React</div>
+                <div class="skill-item">Node.js</div>
+                <div class="skill-item">GSAP</div>
+                <div class="skill-item">UI/UX</div>
+                <div class="skill-item">JavaScript</div>
+                <div class="skill-item">CSS3</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="projects">
+        <div class="glass-card">
+            <h2>Featured Expeditions</h2>
+            <div style="margin-bottom: 2rem; border-left: 2px solid var(--aqua); padding-left: 1.5rem;">
+                <h3>01. Nebula Engine</h3>
+                <p>A procedural space generation tool for game developers.</p>
+            </div>
+            <div style="border-left: 2px solid var(--lavender); padding-left: 1.5rem;">
+                <h3>02. Cyber Sphere</h3>
+                <p>E-commerce platform featuring 360-degree product interaction.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact">
+        <div class="glass-card">
+            <h2>Secure Transmission</h2>
+            <form>
+                <input type="text" placeholder="Your Name">
+                <input type="email" placeholder="Your Email">
+                <textarea rows="4" placeholder="Message Details"></textarea>
+                <button type="submit" class="btn" style="width: 100%;">Send Signal</button>
+            </form>
+        </div>
+    </section>
+
+    <script>
+        /** THREE.JS SETUP **/
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.querySelector('#bg-canvas'),
+            antialias: true,
+            alpha: true
+        });
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // Planet Uranus
+        const planetGroup = new THREE.Group();
+        scene.add(planetGroup);
+
+        const planetGeo = new THREE.SphereGeometry(2, 64, 64);
+        const planetMat = new THREE.MeshStandardMaterial({
+            color: 0x7df9ff,
+            emissive: 0x2a5298,
+            emissiveIntensity: 0.2,
+            roughness: 0.8,
+            metalness: 0.1
+        });
+        const planet = new THREE.Mesh(planetGeo, planetMat);
+        planetGroup.add(planet);
+
+        // Rings
+        const ringGeo = new THREE.TorusGeometry(3.2, 0.015, 16, 100);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xb19cd9, transparent: true, opacity: 0.4 });
+        for(let i=0; i<10; i++) {
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2 + (Math.random() * 0.1);
+            ring.scale.set(1 + i*0.04, 1 + i*0.04, 1);
+            planetGroup.add(ring);
+        }
+
+        // Starfield
+        const starGeo = new THREE.BufferGeometry();
+        const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.015 });
+        const starPos = [];
+        for(let i=0; i<10000; i++) {
+            starPos.push((Math.random()-0.5)*100, (Math.random()-0.5)*100, (Math.random()-0.5)*100);
+        }
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+        const stars = new THREE.Points(starGeo, starMat);
+        scene.add(stars);
+
+        // Lights
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        sunLight.position.set(5, 5, 5);
+        scene.add(sunLight);
+        scene.add(new THREE.AmbientLight(0x404040, 1));
+
+        camera.position.z = 6;
+
+        /** CURSOR LOGIC **/
+        const cursor = document.querySelector('#cursor');
+        window.addEventListener('mousemove', (e) => {
+            gsap.to(cursor, { x: e.clientX - 10, y: e.clientY - 10, duration: 0.1 });
+            // Subtle Parallax
+            const x = (e.clientX / window.innerWidth - 0.5) * 0.5;
+            const y = (e.clientY / window.innerHeight - 0.5) * 0.5;
+            gsap.to(planetGroup.rotation, { y: x, x: y, duration: 2 });
+        });
+
+        /** GSAP SCROLL ANIMATION **/
+        gsap.registerPlugin(ScrollTrigger);
+        const tl = gsap.timeline({
+            scrollTrigger: {
+                trigger: "body",
+                start: "top top",
+                end: "bottom bottom",
+                scrub: 1
+            }
+        });
+
+        tl.to(planetGroup.position, { x: 4, z: -2, y: -1 })
+          .to(camera.position, { z: 8, y: -2 }, 0)
+          .to(planetGroup.rotation, { z: Math.PI }, 0)
+          .to(planetGroup.position, { x: -4, y: -2 }, 1)
+          .to(camera.position, { z: 5, y: -4 }, 1);
+
+        /** ANIMATION LOOP **/
+        function animate() {
+            requestAnimationFrame(animate);
+            planet.rotation.y += 0.003;
+            stars.rotation.y += 0.0005;
+            renderer.render(scene, camera);
+        }
+
+        /** INITIALIZE **/
+        window.addEventListener('load', () => {
+            document.querySelector('#loader').style.opacity = '0';
+            setTimeout(() => document.querySelector('#loader').remove(), 1000);
+            animate();
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>     border: none;
+      color: white;
+      padding: 0.5rem 2rem;
+      border-radius: 30px;
+      font-size: 1.3rem;
+      margin-left: 2rem;
+      border: 1px solid #ffcfc4;
+      cursor: pointer;
+    }
+
+    /* responsive */
+    @media (max-width: 700px) {
+      .hero h2 { font-size: 3.5rem; }
+      header { flex-direction: column; gap: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="venus-bg"></div>
+  <canvas id="three-canvas"></canvas>
+
+  <div class="site-wrapper">
+    <header>
+      <div class="logo">
+        <h1>QIZIN <span>by treznor</span></h1>
+      </div>
+      <div class="nav-icons">
+        <div class="search-wrapper">
+          <input type="text" placeholder="Search..." id="searchInput">
+          <i class="fas fa-search"></i>
+        </div>
+        <i class="fas fa-shopping-bag" id="cartIcon"></i>
+      </div>
+    </header>
+
+    <!-- Hero banner -->
+    <div class="hero">
+      <h2>PORTFOLIO <small>OF TREZNOR</small></h2>
+      <p>✦ 3D venus collection ✦ limited drops</p>
+    </div>
+
+    <!-- Products grid (3D images) -->
+    <div class="section-title">/ trending now</div>
+    <div class="product-grid" id="productGrid">
+      <!-- dynamically populated from js, but static fallback included for clarity -->
+    </div>
+
+    <!-- Footer with checkout button -->
+    <footer>
+      <span>© 2025 QIZIN — venus gradient / all rights reserved </span>
+      <button class="checkout-btn-footer" id="footerCheckout">CHECKOUT →</button>
+    </footer>
+  </div>
+
+  <!-- Cart Sidebar -->
+  <div class="cart-sidebar" id="cartSidebar">
+    <div class="cart-header">
+      <span>your cart</span>
+      <i class="fas fa-times" id="closeCart"></i>
+    </div>
+    <div class="cart-items" id="cartItems">
+      <!-- dynamic cart -->
+    </div>
+    <div class="cart-total" id="cartTotal">Total: ₹0</div>
+    <button class="btn-checkout" id="checkoutBtn">PROCEED</button>
+  </div>
+
+  <!-- Product Page Modal -->
+  <div class="product-page-overlay" id="productPageOverlay">
+    <div class="product-page-card">
+      <i class="fas fa-times close-page" id="closeProductPage"></i>
+      <div class="product-3d-preview">
+        <div class="big-3d" id="productPageImg">🪐</div>
+      </div>
+      <div class="product-details" id="productPageDetails">
+        <h2 id="pageTitle">Venus Ring</h2>
+        <div class="desc" id="pageDesc">handcrafted 3D glow with venus gradient.</div>
+        <div class="price-big" id="pagePrice">₹129</div>
+        <button class="btn-checkout-now" id="addFromPage">Add to cart</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three.js library and simple 3D background -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    // -------------------- 3D BACKGROUND (smooth, venus colored) --------------------
+    import * as THREE from 'three';
+
+    const canvas = document.getElementById('three-canvas');
+    const scene = new THREE.Scene();
+    scene.background = null; // transparent to show venus gradient
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 1, 12);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+    // lights
+    const light = new THREE.AmbientLight(0x404060);
+    scene.add(light);
+    const pointLight = new THREE.PointLight(0xffaa88, 1, 20);
+    pointLight.position.set(2, 5, 5);
+    scene.add(pointLight);
+
+    // floating venus-like geometry (soft particles)
+    const particlesGeo = new THREE.BufferGeometry();
+    const count = 1500;
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const r = 6 + Math.random() * 8;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      positions[i*3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta) * 0.7;
+      positions[i*3+2] = r * Math.cos(phi);
+      
+      // venus gradient colors: peach, rose, lavender
+      const col = new THREE.Color().setHSL(0.05 + Math.random()*0.15, 0.7, 0.7 + Math.random()*0.2);
+      colors[i*3] = col.r;
+      colors[i*3+1] = col.g;
+      colors[i*3+2] = col.b;
+    }
+    particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particlesGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const particlesMat = new THREE.PointsMaterial({ size: 0.18, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    const particles = new THREE.Points(particlesGeo, particlesMat);
+    scene.add(particles);
+
+    // rotating centerpiece (subtle)
+    const torusKnotGeo = new THREE.TorusKnotGeometry(0.9, 0.25, 128, 16);
+    const torusKnotMat = new THREE.MeshPhongMaterial({ color: 0xffaa99, emissive: 0x552244, wireframe: true, transparent: true, opacity: 0.2 });
+    const knot = new THREE.Mesh(torusKnotGeo, torusKnotMat);
+    scene.add(knot);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      particles.rotation.y += 0.0002;
+      particles.rotation.x += 0.0001;
+      knot.rotation.x += 0.002;
+      knot.rotation.y += 0.003;
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // -------------------- UI & CART (fully interactive) --------------------
+    // product data (with 3D image emoji)
+    const products = [
+      { id: 1, name: 'VENUS RING', price: 129, emoji: '💍', desc: '3D ceramic, venus gradient finish.' },
+      { id: 2, name: 'NEBULA PENDANT', price: 199, emoji: '🌙', desc: 'Glowing moonstone & aurora chain.' },
+      { id: 3, name: 'MAGMA CUFF', price: 259, emoji: '🔥', desc: 'Brushed titanium with venus flare.' },
+      { id: 4, name: 'ORBIT EARRINGS', price: 349, emoji: '🪐', desc: 'levitating spheres, gradient anodized.' }
+    ];
+
+    let cart = [];
+
+    // render products
+    const grid = document.getElementById('productGrid');
+    function renderProducts() {
+      grid.innerHTML = '';
+      products.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        card.dataset.id = p.id;
+        card.innerHTML = `
+          <div class="img-3d">${p.emoji}</div>
+          <h3>${p.name}</h3>
+          <div class="price">₹${p.price}</div>
+          <button class="btn-add" data-id="${p.id}">add to cart</button>
+        `;
+        card.querySelector('.btn-add').addEventListener('click', (e) => {
+          e.stopPropagation();
+          addToCart(p.id);
+        });
+        card.addEventListener('click', () => openProductPage(p.id));
+        grid.appendChild(card);
+      });
+    }
+    renderProducts();
+
+    // cart functions
+    function addToCart(id) {
+      const prod = products.find(p => p.id === id);
+      if (!prod) return;
+      const existing = cart.find(item => item.id === id);
+      if (existing) existing.quantity++;
+      else cart.push({ ...prod, quantity: 1 });
+      updateCartSidebar();
+      openCart(); // optional open cart when adding
+    }
+
+    function removeFromCart(id) {
+      cart = cart.filter(item => item.id !== id);
+      updateCartSidebar();
+    }
+
+    function updateCartSidebar() {
+      const container = document.getElementById('cartItems');
+      const totalSpan = document.getElementById('cartTotal');
+      let html = '';
+      let total = 0;
+      cart.forEach(item => {
+        total += item.price * item.quantity;
+        html += `
+          <div class="cart-item">
+            <div class="cart-item-img">${item.emoji}</div>
+            <div class="cart-item-details">
+              <div class="cart-item-title">${item.name} x${item.quantity}</div>
+              <div class="cart-item-price">₹${item.price * item.quantity}</div>
+            </div>
+            <i class="fas fa-trash cart-remove" data-id="${item.id}"></i>
+          </div>
+        `;
+      });
+      container.innerHTML = html || '<p style="opacity:0.6;">cart is empty</p>';
+      totalSpan.innerText = `Total: ₹${total}`;
+      // attach remove events
+      container.querySelectorAll('.cart-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = parseInt(e.target.dataset.id);
+          removeFromCart(id);
+        });
+      });
+    }
+
+    // sidebar controls
+    const cartSidebar = document.getElementById('cartSidebar');
+    const cartIcon = document.getElementById('cartIcon');
+    const closeCart = document.getElementById('closeCart');
+    function openCart() { cartSidebar.classList.add('open'); }
+    function closeCartFn() { cartSidebar.classList.remove('open'); }
+    cartIcon.addEventListener('click', openCart);
+    closeCart.addEventListener('click', closeCartFn);
+
+    // product page
+    const productOverlay = document.getElementById('productPageOverlay');
+    const closePage = document.getElementById('closeProductPage');
+    const pageTitle = document.getElementById('pageTitle');
+    const pageDesc = document.getElementById('pageDesc');
+    const pagePrice = document.getElementById('pagePrice');
+    const pageImg = document.getElementById('productPageImg');
+    const addFromPage = document.getElementById('addFromPage');
+    let currentProduct = null;
+
+    function openProductPage(id) {
+      const prod = products.find(p => p.id === id);
+      if (!prod) return;
+      currentProduct = prod;
+      pageTitle.innerText = prod.name;
+      pageDesc.innerText = prod.desc;
+      pagePrice.innerText = `₹${prod.price}`;
+      pageImg.innerText = prod.emoji;
+      productOverlay.style.display = 'flex';
+    }
+
+    closePage.addEventListener('click', () => productOverlay.style.display = 'none');
+    productOverlay.addEventListener('click', (e) => {
+      if (e.target === productOverlay) productOverlay.style.display = 'none';
+    });
+
+    addFromPage.addEventListener('click', () => {
+      if (currentProduct) {
+        addToCart(currentProduct.id);
+        productOverlay.style.display = 'none';
+      }
+    });
+
+    // search button working (filter)
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase();
+      document.querySelectorAll('.product-card').forEach(card => {
+        const name = card.querySelector('h3').innerText.toLowerCase();
+        card.style.display = name.includes(term) ? 'flex' : 'none';
+      });
+    });
+
+    // footer checkout & checkout btn
+    document.getElementById('footerCheckout').addEventListener('click', () => {
+      alert('Checkout simulation — total: ₹' + cart.reduce((s, i) => s + i.price * i.quantity, 0));
+    });
+    document.getElementById('checkoutBtn').addEventListener('click', () => {
+      alert('Checkout simulation — total: ₹' + cart.reduce((s, i) => s + i.price * i.quantity, 0));
+    });
+
+    // initial update
+    updateCartSidebar();
+
+    // (optional) make all buttons working: also any .btn-checkout-now etc.
+  </script>
+  <!-- ensure cart update also on remove -->
+</body>
+</html>
